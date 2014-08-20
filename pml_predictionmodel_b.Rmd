@@ -1,0 +1,79 @@
+---
+title: "Prediction Assignment for Practical Machine Learning Project"
+author: "Joseph Atkins"
+date: "August 24, 2014"
+output: html_document
+---
+
+##Foreword
+
+Personal activity trackers are used to collect data around personal movement. The data used for the assignment is from accelerometers used by six participants. The activity performed was barbell lifts, performed both correctly and incorrectly in five ways.
+
+The objective of the assignment is to create a prediction model that quantifies how correctly the participants performed the barbell lifts.
+
+
+##Prediction Model
+
+**Data Analysis and Manipulation**
+
+Load in the "Training" and "Testing" datasets. The training dataset will be used for creating the prediction model. The testing dataset will be used for running test cases.
+
+```{r}
+library(caret)
+library(randomForest)
+set.seed(33833)
+t_training <- read.csv("pml-training.csv", header = TRUE, sep = ",")
+t_testing <- read.csv("pml-testing.csv", header = TRUE, sep = ",")
+```
+
+The training dataset has constant and almost constant predictors across the sample. These variables are problematic for the prediction model. Therefore, any variables that have near zero variance are removed.
+
+```{r}
+zerovar <- nearZeroVar(t_training)
+t_training <- t_training[-zerovar] 
+t_testing <- t_testing[-zerovar]
+```
+
+Assign missing values to eliminate NULL values.
+
+```{r}
+t_training[is.na(t_training)] <- 0
+t_testing[is.na(t_testing)] <- 0
+```
+
+Remove any non-numeric columns leaving only numerical columns remaining.
+
+```{r}
+numericcols <- which(lapply(t_training, class) %in% c('numeric'))
+t_training <- cbind(t_training$classe, t_training[,numericcols])
+t_testing <- t_testing[,numericcols]
+```
+
+Rename the label on the "classe" column.
+
+```{r} 
+names(t_training)[1] <- 'classe'
+```
+
+
+**Creation of the Prediction Model**
+
+The prediction model is created using the random forests method. The reason is because the random forests method allows the variables to be ranked in a natural way.
+
+The prediction model contains a confusion matrix to produce a test outcome for the variables while identifying contingencies and errors.
+
+```{r} 
+prediction_model <- randomForest(classe ~ ., t_training)
+training_p <-predict(prediction_model,t_training)
+confusionMatrix(training_p, t_training$classe)
+print(mean(training_p == t_training$classe))
+```
+
+**Case Tests and Results**
+
+Applying the algorithm to the twenty test cases in the testing dataset. Results are displayed.
+
+```{r} 
+answers <- predict(prediction_model, t_testing)
+answers
+```
